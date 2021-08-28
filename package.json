@@ -1,0 +1,26 @@
+{
+  "name": "firebase-supabase-function-bridge",
+  "version": "1.0.0",
+  "description": "Bridge between Firebase Functions and Supabase HTTP triggers.",
+  "main": "src/index.js",
+  "author": "Jared Williams <accounts@jaredwilliams.com.au>",
+  "license": "ISC",
+  "dependencies": {
+    "@supabase/supabase-js": "^1.22.3",
+    "dotenv": "^10.0.0",
+    "pg": "^8.7.1"
+  },
+  "peerDependencies": {
+    "firebase-admin": "*",
+    "firebase-functions": "*"
+  },
+  "devDependencies": {
+    "firebase-admin": "^9.11.1",
+    "firebase-functions": "^3.15.4",
+    "prettier": "^2.3.2"
+  },
+  "bin": "bin/deploy",
+  "scripts": {
+    "prettier": "prettier \"src/**/*.js\" -w"
+  }
+}

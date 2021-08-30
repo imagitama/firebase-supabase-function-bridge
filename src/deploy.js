@@ -9,49 +9,51 @@ const { FunctionTypes } = require('./')
 
 dotenv.config()
 
-admin.initializeApp()
+if (args.includes('--initApp')) {
+  admin.initializeApp()
+}
 
 const isDebug = args.includes('--debug')
 
 const getCliArgument = (nameWithDashes, defaultVal) => {
-    const arg = args.find((arg) =>
-        arg.includes(nameWithDashes)
-    )
+  const arg = args.find((arg) => arg.includes(nameWithDashes))
 
-    if (arg) {
-        const val = arg.split('=')[1]
-
-        if (isDebug) {
-            console.debug(`${nameWithDashes} = "${val}"`)
-        }
-
-        return val
-    }
-
-    if (defaultVal !== undefined) {
-        if (isDebug) {
-            console.debug(`${nameWithDashes} = "${defaultVal}" (default)`)
-        }
-
-        return defaultVal
-    }
+  if (arg) {
+    const val = arg.split('=')[1]
 
     if (isDebug) {
-        console.debug(`${nameWithDashes} empty`)
+      console.debug(`${nameWithDashes} = "${val}"`)
     }
 
-    return ''
+    return val
+  }
+
+  if (defaultVal !== undefined) {
+    if (isDebug) {
+      console.debug(`${nameWithDashes} = "${defaultVal}" (default)`)
+    }
+
+    return defaultVal
+  }
+
+  if (isDebug) {
+    console.debug(`${nameWithDashes} empty`)
+  }
+
+  return ''
 }
 
-const supabaseFunctionNamesToOnlyWorkWith = getCliArgument('--functions', '').split(',').filter(arg => arg)
+const supabaseFunctionNamesToOnlyWorkWith = getCliArgument('--functions', '')
+  .split(',')
+  .filter((arg) => arg)
 const baseUrl = getCliArgument('--baseUrl')
 const customApiKey = getCliArgument('--customApiKey')
 
 if (!baseUrl) {
-    throw new Error('Base URL is not set!')
+  throw new Error('Base URL is not set!')
 }
 if (!customApiKey) {
-    throw new Error('Custom API key is not set!')
+  throw new Error('Custom API key is not set!')
 }
 
 const pathToFirebaseFunctionsFile = path.resolve(process.cwd(), 'index.js')
@@ -129,7 +131,7 @@ async function createSupabaseFunctions(supabaseFunctions) {
     const eventName = functionConfig.event
     const headers = {
       'content-type': 'application/json',
-      'x-api-key': customApiKey
+      'x-api-key': customApiKey,
     }
 
     output.functions[functionName] = {
@@ -207,9 +209,7 @@ async function main() {
 
     console.debug('Connected!')
 
-    console.info(
-      `Functions will be called via URL ${baseUrl}/myFunctionName`
-    )
+    console.info(`Functions will be called via URL ${baseUrl}/myFunctionName`)
 
     await createSupabaseFunctions(supabaseFunctionsToOperateOn)
 

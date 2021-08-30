@@ -20,9 +20,9 @@ module.exports.myFunctionName = createSupabaseFunction(
   'photos',
   FunctionTypes.CREATE,
   (req, res) => {
-      const myPhoto = req.body.record
+    const myPhoto = req.body.record
 
-      res.status(200)
+    res.status(200)
   }
 )
 
@@ -30,12 +30,14 @@ module.exports.myFunctionName = createSupabaseFunction(
   'users',
   FunctionTypes.UPDATE,
   (req, res) => {
-      const oldProfile = req.body.old_record
-      const newProfile = req.body.record
+    const oldProfile = req.body.old_record
+    const newProfile = req.body.record
 
-      console.log(`You changed your username from "${oldProfile.username}" to "${newProfile.username}"`)
+    console.log(
+      `You changed your username from "${oldProfile.username}" to "${newProfile.username}"`
+    )
 
-      res.status(200)
+    res.status(200)
   }
 )
 ```
@@ -77,3 +79,7 @@ Show extra output.
 #### `--functions=myFuncName,anotherFuncName`
 
 A comma delimited list of function names to deploy.
+
+#### `--initApp`
+
+Initialise Firebase Admin for you. This usually conflicts with your Firebase Functions code.

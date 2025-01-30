@@ -1,10 +1,28 @@
-const functions = require('firebase-functions')
-const { createClient } = require('@supabase/supabase-js')
+import { Request, onRequest } from 'firebase-functions/https'
+import { createClient } from '@supabase/supabase-js'
+import * as express from 'express'
+import dotenv from 'dotenv'
+import path from 'path'
+import fs from 'fs'
 
-const config = functions.config()
-const supabaseUrl = config.supabase.url
-const supabaseServiceRoleSecret = config.supabase.service_role_secret
-const customApiKey = config.supabase.custom_api_key
+// you would think Firebase would handle all of this but it doesn't
+
+const devEnvPath = path.resolve(process.cwd(), `.env.dev`)
+const prodEnvPath = path.resolve(process.cwd(), `.env.prod`)
+
+dotenv.config({
+  path:
+    process.env.NODE_ENV === 'development' && fs.existsSync(devEnvPath)
+      ? devEnvPath
+      : fs.existsSync(prodEnvPath)
+      ? prodEnvPath
+      : undefined,
+})
+
+// TODO: Support google's secret manager
+const supabaseUrl = process.env.SUPABASE_URL
+const supabaseServiceRoleSecret = process.env.SUPABASE_SERVICE_ROLE_SECRET
+const customApiKey = process.env.SUPABASE_CUSTOM_API_KEY
 
 if (!supabaseUrl) {
   throw new Error('Cannot create Supabase client without URL!')
@@ -16,8 +34,7 @@ if (!customApiKey) {
   throw new Error('Cannot continue without a custom API key!')
 }
 
-let client = createClient(supabaseUrl, supabaseServiceRoleSecret)
-module.exports.client = client
+export let client = createClient(supabaseUrl, supabaseServiceRoleSecret)
 
 const validateRequest = (req, res, tableName, functionType) => {
   try {
@@ -97,18 +114,23 @@ const validateRequest = (req, res, tableName, functionType) => {
   }
 }
 
-const createSupabaseFunction = (tableName, functionType, body) => {
+export const createSupabaseFunction = (
+  tableName: string,
+  functionType: FunctionTypes,
+  body: (
+    request: Request,
+    response: express.Response<any, Record<string, any>>
+  ) => void | Promise<void>
+) => {
   if (!customApiKey) {
     throw new Error(`Cannot create supabase function without a custom API key!`)
   }
 
-  const firebaseFunction = functions.https.onRequest(async (req, res) => {
+  const firebaseFunction = onRequest(async (req, res) => {
     if (validateRequest(req, res, tableName, functionType)) {
       try {
-        const result = await body(req, res)
-        if (result) {
-          res.status(200).send(result)
-        } else if (!res.headersSent) {
+        await body(req, res)
+        if (!res.headersSent) {
           res.status(200).send({
             message: 'Done',
           })
@@ -123,6 +145,7 @@ const createSupabaseFunction = (tableName, functionType, body) => {
   })
 
   // append these special properties for other tools to sniff and do their stuff
+  // @ts-ignore
   firebaseFunction._supabase = {
     table: tableName,
     type: functionType,
@@ -130,10 +153,8 @@ const createSupabaseFunction = (tableName, functionType, body) => {
 
   return firebaseFunction
 }
-module.exports.createSupabaseFunction = createSupabaseFunction
 
-const FunctionTypes = {
-  CREATE: 'CREATE',
-  UPDATE: 'UPDATE',
+export enum FunctionTypes {
+  CREATE = 'CREATE',
+  UPDATE = 'UPDATE',
 }
-module.exports.FunctionTypes = FunctionTypes

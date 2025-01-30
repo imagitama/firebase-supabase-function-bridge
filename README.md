@@ -1,6 +1,8 @@
 # Firebase Supabase Function Bridge
 
-This Node.js module lets Supabase securely call your Firebase Functions using HTTP triggers.
+_Supports Firebase Functions V2 with environment variables as config._
+
+This Node.js 18+ module lets Supabase securely call your Firebase Functions using HTTP triggers.
 
 It also lets you automatically create Supabase HTTP triggers using your Firebase Functions.
 
@@ -8,15 +10,23 @@ It also lets you automatically create Supabase HTTP triggers using your Firebase
 
     npm i firebase-supabase-function-bridge
 
-Then create your Firebase Function like you normally would except use our helper function. Under the covers this module creates a Firebase HTTP function for you that checks to see if Supabase really is calling it.
+Then set some environment variables (Firebase Functions V2) in either `.env.dev`, `.env.prod` or `.env` (note: using your project ID or alias as the filename does **not** work):
 
-```js
-const {
+| Env var | Desc | Example |
+| --- | --- | --- |
+| `SUPABASE_URL` | The URL to your Supabase project. | `https://abcdef.supabase.co` |
+| `SUPABASE_SERVICE_ROLE_SECRET` | The service role secret. | `abcdef` |
+| `SUPABASE_CUSTOM_API_KEY` | An API key to prove the HTTP request is coming from your Supabase SQL trigger. | `abcdef` |
+
+Then create your function using `createSupabaseFunction`:
+
+```ts
+import {
   createSupabaseFunction,
   FunctionTypes,
-} = require('firebase-supabase-function-bridge')
+} from 'firebase-supabase-function-bridge'
 
-module.exports.myFunctionName = createSupabaseFunction(
+export const myFunctionName = createSupabaseFunction(
   'photos',
   FunctionTypes.CREATE,
   (req, res) => {
@@ -26,7 +36,7 @@ module.exports.myFunctionName = createSupabaseFunction(
   }
 )
 
-module.exports.myFunctionName = createSupabaseFunction(
+export default createSupabaseFunction(
   'users',
   FunctionTypes.UPDATE,
   (req, res) => {
@@ -42,17 +52,9 @@ module.exports.myFunctionName = createSupabaseFunction(
 )
 ```
 
-Your function can either return any value or a `Promise` with a value and the module will return a 200 status code. Or you can send any status code using Express. If you do not do anything it will always send a 200.
+**Note:** If your handler does not return a success response but it is successful, this module will automatically send 200.
 
-Then add some additional Firebase Function config:
-
-    firebase functions:config:set supabase.url="YOUR SUPABASE APP URL" supabase.service_role_secret="YOUR SERVICE ROLE SECRET" supabase.custom_api_key="YOUR CUSTOM API KEY"
-
-Then deploy your Firebase Functions using the Firebase CLI as normal.
-
-### Custom API key
-
-To ensure only Supabase is calling your Firebase Functions we use a simple API key system. Set any string as your API key and this module will check if a `x-api-key` header includes your key.
+Now deploy your Firebase Functions using the Firebase CLI as normal.
 
 ## Deploy Supabase HTTP triggers
 

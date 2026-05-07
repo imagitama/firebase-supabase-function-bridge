@@ -12,11 +12,11 @@ It also lets you automatically create Supabase HTTP triggers using your Firebase
 
 Then set some environment variables (Firebase Functions V2) in either `.env.dev`, `.env.prod` or `.env` (note: using your project ID or alias as the filename does **not** work):
 
-| Env var | Desc | Example |
-| --- | --- | --- |
-| `SUPABASE_URL` | The URL to your Supabase project. | `https://abcdef.supabase.co` |
-| `SUPABASE_SERVICE_ROLE_SECRET` | The service role secret. | `abcdef` |
-| `SUPABASE_CUSTOM_API_KEY` | An API key to prove the HTTP request is coming from your Supabase SQL trigger. | `abcdef` |
+| Env var                        | Desc                                                                           | Example                      |
+| ------------------------------ | ------------------------------------------------------------------------------ | ---------------------------- |
+| `SUPABASE_URL`                 | The URL to your Supabase project.                                              | `https://abcdef.supabase.co` |
+| `SUPABASE_SERVICE_ROLE_SECRET` | The service role secret.                                                       | `abcdef`                     |
+| `SUPABASE_CUSTOM_API_KEY`      | An API key to prove the HTTP request is coming from your Supabase SQL trigger. | `abcdef`                     |
 
 Then create your function using `createSupabaseFunction`:
 
@@ -85,3 +85,11 @@ A comma delimited list of function names to deploy.
 #### `--initApp`
 
 Initialise Firebase Admin for you. This usually conflicts with your Firebase Functions code.
+
+## Development
+
+    npm i
+
+## Publishing
+
+    npm pack

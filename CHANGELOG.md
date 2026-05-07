@@ -1,3 +1,7 @@
+# 2.1.1
+
+- README
+
 # 2.1.0
 
 - added generic type `createSupabaseFunction<TRecord>(...)` which enforces `req.body.record` and `req.body.old_record`

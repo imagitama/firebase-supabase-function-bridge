@@ -1,11 +1,9 @@
-'use strict'
-
-const dotenv = require('dotenv')
-const { Client } = require('pg')
-const path = require('path')
-const admin = require('firebase-admin')
-const args = require('process').argv
-const { FunctionTypes } = require('./')
+import dotenv from 'dotenv'
+import { Client } from 'pg'
+import path from 'path'
+import admin from 'firebase-admin'
+import { argv as args } from 'process'
+import { FunctionTypes } from './'
 
 dotenv.config()
 
@@ -15,7 +13,10 @@ if (args.includes('--initApp')) {
 
 const isDebug = args.includes('--debug')
 
-const getCliArgument = (nameWithDashes, defaultVal) => {
+const getCliArgument = (
+  nameWithDashes: string,
+  defaultVal?: string
+): string => {
   const arg = args.find((arg) => arg.includes(nameWithDashes))
 
   if (arg) {
@@ -88,10 +89,12 @@ function getFirebaseFunctionsAsSupabaseFunctions() {
 
   for (const [functionName, functionBody] of Object.entries(functionsByName)) {
     // only accept functions created using our internal tool
+    // @ts-ignore
     if (!functionBody._supabase) {
       continue
     }
 
+    // @ts-ignore
     const { table, type } = functionBody._supabase
 
     supabaseFunctions[functionName] = {
@@ -117,7 +120,14 @@ const getSqlEventForEventName = (eventName) => {
   }
 }
 
-async function createSupabaseFunctions(supabaseFunctions) {
+interface FunctionConfig {
+  table: string
+  event: string
+}
+
+async function createSupabaseFunctions(supabaseFunctions: {
+  [functionName: string]: FunctionConfig
+}) {
   const output = {
     functions: {},
   }

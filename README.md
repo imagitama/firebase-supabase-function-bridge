@@ -2,21 +2,23 @@
 
 _Supports Firebase Functions V2 with environment variables as config._
 
-This Node.js 18+ module lets Supabase securely call your Firebase Functions using HTTP triggers.
+This Node.js module bridges the gap between your Supabase Postgres database and your Firebase functions (like how Firestore can trigger functions).
 
-It also lets you automatically create Supabase HTTP triggers using your Firebase Functions.
+It exposes a Node.js API for creating your functions which just ensures the trigger provided the correct API key, function name and verb.
 
 ## Usage
 
-    npm i firebase-supabase-function-bridge
+1. Install the package:
 
-Then set some environment variables (Firebase Functions V2) in either `.env.dev`, `.env.prod` or `.env` (note: using your project ID or alias as the filename does **not** work):
+   npm i firebase-supabase-function-bridge
 
-| Env var                        | Desc                                                                           | Example                      |
-| ------------------------------ | ------------------------------------------------------------------------------ | ---------------------------- |
-| `SUPABASE_URL`                 | The URL to your Supabase project.                                              | `https://abcdef.supabase.co` |
-| `SUPABASE_SERVICE_ROLE_SECRET` | The service role secret.                                                       | `abcdef`                     |
-| `SUPABASE_CUSTOM_API_KEY`      | An API key to prove the HTTP request is coming from your Supabase SQL trigger. | `abcdef`                     |
+2. Add env vars to your `.env` file (eg. `.env.dev` or `.env.prod`):
+
+| Env var                     | Desc                                                                           | Example                                                                                        |
+| --------------------------- | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| `BRIDGE_FUNCTIONS_BASE_URL` | The base URL of your Firebase functions.                                       | `https://us-central1-myproject.cloudfunctions.net`                                             |
+| `SUPABASE_CUSTOM_API_KEY`   | An API key to prove the HTTP request is coming from your Supabase SQL trigger. | `abcdef`                                                                                       |
+| `POSTGRESQL_CONNECTION_URL` | The connection URL to your Supabase Postgres database.                         | `postgresql://postgres.$projectid:$password@aws-0-us-east-1.pooler.supabase.com:5432/postgres` |
 
 Then create your function using `createSupabaseFunction`:
 
@@ -26,17 +28,23 @@ import {
   FunctionTypes,
 } from 'firebase-supabase-function-bridge'
 
-export const myFunctionName = createSupabaseFunction(
+interface PhotoRecord {
+  id: string
+}
+
+export const myFunctionName = createSupabaseFunction<PhotoRecord>(
   'photos',
   FunctionTypes.CREATE,
   (req, res) => {
     const myPhoto = req.body.record
 
-    res.status(200)
+    res.status(200).send({ message: 'Success!' })
   }
 )
+```
 
-export default createSupabaseFunction(
+```ts
+export default createSupabaseFunction<PhotoRecord>(
   'users',
   FunctionTypes.UPDATE,
   (req, res) => {
@@ -47,30 +55,12 @@ export default createSupabaseFunction(
       `You changed your username from "${oldProfile.username}" to "${newProfile.username}"`
     )
 
-    res.status(200)
+    res.status(200).send({ message: 'Success!' })
   }
 )
 ```
 
-**Note:** If your handler does not return a success response but it is successful, this module will automatically send 200.
-
-Now deploy your Firebase Functions using the Firebase CLI as normal.
-
-## Deploy Supabase HTTP triggers
-
-If you create your Firebase Functions using our helper function, our script can look at your functions and automatically create Supabase HTTP triggers for you (instead of doing it manually in the web console).
-
-Note this will replace any existing triggers with the same names.
-
-First set an environment variable so we can connect to your Postgres database:
-
-    POSTGRESQL_CONNECTION_URL=postgres://postgres:YOUR_PASSWORD@YOUR_DB_URL:5432/postgres
-
-Then run the module and provide some details to configure your triggers:
-
-    firebase-supabase-function-bridge
-        --baseUrl=https://us-central1-my-project.cloudfunctions.net
-        --customApiKey=[YOUR CUSTOM API KEY]
+**Note:** Firebase automatically sends status 200 if you do not specify a status.
 
 ### Options
 
@@ -92,4 +82,6 @@ Initialise Firebase Admin for you. This usually conflicts with your Firebase Fun
 
 ## Publishing
 
-    npm pack
+    npm run build
+    cd dist
+    npm publish

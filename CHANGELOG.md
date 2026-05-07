@@ -1,3 +1,16 @@
+# 2.1.0
+
+- added generic type `createSupabaseFunction<TRecord>(...)` which enforces `req.body.record` and `req.body.old_record`
+- deprecated enum `FunctionTypes` in favor of better named `Operation`
+- removed Supabase SDK dependency
+- renamed `FIREBASE_FUNCTIONS_BASE_URL` to `BRIDGE_FUNCTIONS_BASE_URL` to fix Firebase error about reserved prefixes
+- added `--project` (or `-p`) arg to load .env file at `.env.$project`
+- added `--env` (or `-e`) arg to override .env file path
+- added `--indexPath` to override Firebase index.js path
+- added `--connectionUrl` to override Postgres connection URL (default: POSTGRESQL_CONNECTION_URL)
+- added unit tests
+- export more types and functions
+
 # 2.0.1
 
 - added missing docs

@@ -1,45 +1,39 @@
-import { Request, onRequest } from 'firebase-functions/https'
-import { createClient } from '@supabase/supabase-js'
+import * as FirebaseHttps from 'firebase-functions/https'
 import * as express from 'express'
-import dotenv from 'dotenv'
-import path from 'path'
-import fs from 'fs'
+import { getFunctionArgs } from './env'
+import {
+  FirebaseFunctionWithSupabase,
+  FunctionTypes,
+  Operation,
+  Payload,
+} from './common'
 
-// you would think Firebase would handle all of this but it doesn't
-
-const devEnvPath = path.resolve(process.cwd(), `.env.dev`)
-const prodEnvPath = path.resolve(process.cwd(), `.env.prod`)
-
-dotenv.config({
-  path:
-    process.env.NODE_ENV === 'development' && fs.existsSync(devEnvPath)
-      ? devEnvPath
-      : fs.existsSync(prodEnvPath)
-      ? prodEnvPath
-      : undefined,
-})
-
-// TODO: Support google's secret manager
-const supabaseUrl = process.env.SUPABASE_URL
-const supabaseServiceRoleSecret = process.env.SUPABASE_SERVICE_ROLE_SECRET
-const customApiKey = process.env.SUPABASE_CUSTOM_API_KEY
-
-if (!supabaseUrl) {
-  throw new Error('Cannot create Supabase client without URL!')
-}
-if (!supabaseServiceRoleSecret) {
-  throw new Error('Cannot create Supabase client without key!')
-}
-if (!customApiKey) {
-  throw new Error('Cannot continue without a custom API key!')
+export type SupabaseWebhookRequest<TRecord> = Omit<
+  FirebaseHttps.Request,
+  'body'
+> & {
+  body: Payload<TRecord>
 }
 
-export let client = createClient(supabaseUrl, supabaseServiceRoleSecret)
-
-const validateRequest = (req, res, tableName, functionType) => {
+/**
+ * Validates the request by returning true/false and sends a 400 response if invalid.
+ * @param req The request.
+ * @param res The response we can send.
+ * @param tableName The name of the table.
+ * @param functionType The operation on the table to subscribe to.
+ * @returns If the request is valid or not. Sends a 400 response if invalid.
+ */
+export const validateRequest = <TRecord>(
+  req: SupabaseWebhookRequest<TRecord>,
+  res: express.Response,
+  tableName: string,
+  operation: Operation
+): boolean => {
   try {
+    const { args } = getFunctionArgs()
+
     if (req.method !== 'POST') {
-      console.error('Request method is not POST')
+      console.error(`Request method is ${req.method} not POST`)
       throw new Error('Method not allowed')
     }
 
@@ -56,52 +50,61 @@ const validateRequest = (req, res, tableName, functionType) => {
       throw new Error('Body is malformed (table)')
     }
 
-    if (functionType === FunctionTypes.CREATE) {
+    if (operation === Operation.Create) {
       if (req.body.type !== 'INSERT') {
-        console.error('Request does not match the configured type', {
+        console.error('INSERT request does not match the configured type', {
           theirs: req.body.type,
-          ours: functionType,
+          ours: operation,
         })
         throw new Error('Body is malformed (type)')
       }
 
       if (!req.body.record) {
-        console.error('Request body is missing the "record" property', {
+        console.error('INSERT request body is missing the "record" property', {
           body: req.body,
         })
         throw new Error('Body is malformed (record)')
       }
     }
 
-    if (functionType === FunctionTypes.UPDATE) {
+    if (operation === Operation.Update) {
+      if (req.body.type !== 'UPDATE') {
+        console.error('UPDATE request does not match the configured type', {
+          theirs: req.body.type,
+          ours: operation,
+        })
+        throw new Error('Body is malformed (type)')
+      }
+
       if (!req.body.record) {
-        console.error('Request body is missing the "record" property', {
+        console.error('UPDATE request body is missing the "record" property', {
           body: req.body,
         })
         throw new Error('Body is malformed (new record)')
       }
+
       if (!req.body.old_record) {
-        console.error('Request body is missing the "old_record" property', {
-          body: req.body,
-        })
+        console.error(
+          'UPDATE request body is missing the "old_record" property',
+          {
+            body: req.body,
+          }
+        )
         throw new Error('Body is malformed (old record)')
       }
     }
 
     const providedApiKey = req.headers['x-api-key']
 
-    if (!providedApiKey || !customApiKey || providedApiKey !== customApiKey) {
-      if (!providedApiKey) {
-        console.error('No provided API key')
-      } else if (!customApiKey) {
-        console.error('No custom API key set')
-      } else if (providedApiKey !== customApiKey) {
-        console.error('Provided API key does not match custom API key', {
-          theirs: providedApiKey,
-          ours: customApiKey,
-        })
-      }
-      throw new Error('API key is not valid or not provided')
+    if (!providedApiKey) {
+      console.error('No provided API key')
+      throw new Error('API key not provided')
+    } else if (providedApiKey !== args.customApiKey) {
+      console.error('Provided API key does not match custom API key', {
+        theirs: providedApiKey,
+        ours: args.customApiKey,
+      })
+      throw new Error('API key invalid')
     }
 
     return true
@@ -114,47 +117,54 @@ const validateRequest = (req, res, tableName, functionType) => {
   }
 }
 
-export const createSupabaseFunction = (
+/**
+ * Creates a "Supabase" function which performs all of the wiring to bridge Supabase with Firebase.
+ * Sends status 200 on success (if you don't send it yourself).
+ * Sends status 500 on any error.
+ * @param tableName The table to subscribe to.
+ * @param functionType The operation to subscribe to (INSERT/UPDATE).
+ * @param body The function body.
+ * @returns A Firebase HTTP function.
+ */
+export const createSupabaseFunction = <TRecord>(
   tableName: string,
-  functionType: FunctionTypes,
+  operation: Operation | FunctionTypes,
   body: (
-    request: Request,
-    response: express.Response<any, Record<string, any>>
-  ) => void | Promise<void>
-) => {
-  if (!customApiKey) {
-    throw new Error(`Cannot create supabase function without a custom API key!`)
-  }
-
-  const firebaseFunction = onRequest(async (req, res) => {
-    if (validateRequest(req, res, tableName, functionType)) {
-      try {
-        await body(req, res)
-        if (!res.headersSent) {
-          res.status(200).send({
-            message: 'Done',
+    request: SupabaseWebhookRequest<TRecord>,
+    response: express.Response
+  ) => void | Promise<void>,
+  options: FirebaseHttps.HttpsOptions = {}
+): FirebaseHttps.HttpsFunction => {
+  const firebaseFunction: FirebaseHttps.HttpsFunction = FirebaseHttps.onRequest(
+    options,
+    async (req, res) => {
+      if (
+        validateRequest<TRecord>(req, res, tableName, operation as Operation)
+      ) {
+        try {
+          await body(req as SupabaseWebhookRequest<TRecord>, res)
+          if (!res.headersSent) {
+            res.status(200).send({
+              message: 'Done',
+            })
+          }
+        } catch (err) {
+          console.error(err)
+          res.status(500).send({
+            message: 'Internal server error',
           })
         }
-      } catch (err) {
-        console.error(err)
-        res.status(500).send({
-          message: 'Internal server error',
-        })
       }
     }
-  })
+  )
 
-  // append these special properties for other tools to sniff and do their stuff
-  // @ts-ignore
-  firebaseFunction._supabase = {
+  // deploy code checks this
+  ;(firebaseFunction as FirebaseFunctionWithSupabase)._supabase = {
     table: tableName,
-    type: functionType,
+    type: operation as Operation,
   }
 
   return firebaseFunction
 }
 
-export enum FunctionTypes {
-  CREATE = 'CREATE',
-  UPDATE = 'UPDATE',
-}
+export * from './common'

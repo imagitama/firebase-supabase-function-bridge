@@ -28,26 +28,35 @@ export type FirebaseFunctionWithSupabase = FirebaseHttps.HttpsFunction & {
 
 type TableRecord<T> = T
 
-// copied from https://supabase.com/docs/guides/database/webhooks#payload
-export type InsertPayload<T> = {
-  type: 'INSERT'
+enum PayloadType {
+  Insert = 'INSERT',
+  Update = 'UPDATE',
+  Delete = 'DELETE'
+}
+
+export interface BasePayload<T> {
+  type: PayloadType
   table: string
   schema: string
+}
+
+// inspired by https://supabase.com/docs/guides/database/webhooks#payload
+export interface InsertPayload<T> extends BasePayload<T> {
+  type: PayloadType.Insert
   record: TableRecord<T>
   old_record: null
 }
-export type UpdatePayload<T> = {
-  type: 'UPDATE'
-  table: string
-  schema: string
+
+export interface UpdatePayload<T> extends BasePayload<T> {
+  type: PayloadType.Update
   record: TableRecord<T>
   old_record: TableRecord<T>
 }
-export type DeletePayload<T> = {
-  type: 'DELETE'
-  table: string
-  schema: string
+
+export interface DeletePayload<T> extends BasePayload<T> {
+  type: PayloadType.Delete
   record: null
   old_record: TableRecord<T>
 }
+
 export type Payload<T> = InsertPayload<T> | UpdatePayload<T> | DeletePayload<T>

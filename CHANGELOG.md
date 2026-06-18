@@ -1,3 +1,9 @@
+# 2.2.0
+
+- increased default timeout from 1000ms => 2000ms
+- added `timeoutMs` arg
+- fix `record` and `old_record` possibly being `null`
+
 # 2.1.1
 
 - README

@@ -5,6 +5,7 @@ import {
   createSupabaseFunctions,
   disconnectFromPostgres,
   getFirebaseFunctionsAsSupabaseFunctions,
+  SupabaseFunctionConfig,
 } from './sql'
 
 async function main() {
@@ -35,7 +36,7 @@ async function main() {
     if (functionNames !== null && functionNames.length) {
       console.debug(`Only operating on functions: ${functionNames.join(', ')}`)
 
-      const newFuncs = {}
+      const newFuncs: { [functionName: string]: SupabaseFunctionConfig } = {}
 
       for (const functionName of functionNames) {
         if (!(functionName in allSupabaseFunctions)) {
@@ -59,7 +60,10 @@ async function main() {
       `Functions will be called via URL ${args.baseUrl}/myFunctionName`
     )
 
-    await createSupabaseFunctions(supabaseFunctionsToOperateOn)
+    await createSupabaseFunctions(
+      supabaseFunctionsToOperateOn,
+      parseInt(args.timeoutMs)
+    )
 
     console.info('Job done!')
 

@@ -19,7 +19,7 @@ export async function disconnectFromPostgres(): Promise<void> {
 async function runSqlQuery(query: string, params = []): Promise<void> {
   if (!postgresClient) throw new Error('Missing a client')
   console.debug(query, params)
-  return postgresClient.query(query, params)
+  await postgresClient.query(query, params)
 }
 
 export interface SupabaseFunctionConfig {
@@ -38,7 +38,8 @@ export function getFirebaseFunctionsAsSupabaseFunctions(): SupabaseFunctions {
   const functionsByName = require(getCliArgs().args
     .indexPath) as FirebaseFunctionIndex
 
-  const supabaseFunctions = {}
+  const supabaseFunctions: { [functionName: string]: SupabaseFunctionConfig } =
+    {}
 
   for (const [functionName, functionBody] of Object.entries(functionsByName)) {
     // only accept functions created using our internal tool
@@ -75,7 +76,8 @@ const getSqlEventForOperation = (operation: Operation): SqlOperation => {
 }
 
 export async function createSupabaseFunctions(
-  supabaseFunctions: SupabaseFunctions
+  supabaseFunctions: SupabaseFunctions,
+  timeoutMs: number
 ): Promise<void> {
   const { args } = getCliArgs()
 
@@ -108,6 +110,6 @@ AFTER ${getSqlEventForOperation(operation)} ON public.${tableName}
 FOR EACH ROW
 EXECUTE PROCEDURE supabase_functions.http_request('${url}', '${method}', '${JSON.stringify(
       headers
-    )}', '{}', '1000');`)
+    )}', '{}', '${timeoutMs}');`)
   }
 }

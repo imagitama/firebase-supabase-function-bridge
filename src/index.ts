@@ -2,17 +2,20 @@ import * as FirebaseHttps from 'firebase-functions/https'
 import * as express from 'express'
 import { getFunctionArgs } from './env'
 import {
+  BasePayload,
   FirebaseFunctionWithSupabase,
   FunctionTypes,
+  InsertPayload,
   Operation,
   Payload,
+  UpdatePayload,
 } from './common'
 
-export type SupabaseWebhookRequest<TRecord> = Omit<
+export type SupabaseWebhookRequest<TBody> = Omit<
   FirebaseHttps.Request,
   'body'
 > & {
-  body: Payload<TRecord>
+  body: TBody
 }
 
 /**
@@ -24,7 +27,7 @@ export type SupabaseWebhookRequest<TRecord> = Omit<
  * @returns If the request is valid or not. Sends a 400 response if invalid.
  */
 export const validateRequest = <TRecord>(
-  req: SupabaseWebhookRequest<TRecord>,
+  req: SupabaseWebhookRequest<Payload<TRecord>>,
   res: express.Response,
   tableName: string,
   operation: Operation
@@ -111,11 +114,17 @@ export const validateRequest = <TRecord>(
   } catch (err) {
     console.error(err)
     res.status(400).send({
-      message: err.message,
+      message: (err as Error).message,
     })
     return false
   }
 }
+
+type OperationPayload<TOperation extends Operation, TRecord> =
+  TOperation extends Operation.Create ? InsertPayload<TRecord> :
+  TOperation extends Operation.Update ? UpdatePayload<TRecord> :
+  // Op extends Operation.Delete ? DeletePayload<TRecord> :
+  BasePayload<TRecord>
 
 /**
  * Creates a "Supabase" function which performs all of the wiring to bridge Supabase with Firebase.
@@ -126,11 +135,11 @@ export const validateRequest = <TRecord>(
  * @param body The function body.
  * @returns A Firebase HTTP function.
  */
-export const createSupabaseFunction = <TRecord>(
+export const createSupabaseFunction = <TRecord, TOperation extends Operation>(
   tableName: string,
-  operation: Operation | FunctionTypes,
+  operation: TOperation,
   body: (
-    request: SupabaseWebhookRequest<TRecord>,
+    request: SupabaseWebhookRequest<OperationPayload<TOperation, TRecord>>,
     response: express.Response
   ) => void | Promise<void>,
   options: FirebaseHttps.HttpsOptions = {}
@@ -142,7 +151,8 @@ export const createSupabaseFunction = <TRecord>(
         validateRequest<TRecord>(req, res, tableName, operation as Operation)
       ) {
         try {
-          await body(req as SupabaseWebhookRequest<TRecord>, res)
+          await body(req as SupabaseWebhookRequest<OperationPayload<TOperation, TRecord>>, res)
+
           if (!res.headersSent) {
             res.status(200).send({
               message: 'Done',
@@ -158,11 +168,11 @@ export const createSupabaseFunction = <TRecord>(
     }
   )
 
-  // deploy code checks this
-  ;(firebaseFunction as FirebaseFunctionWithSupabase)._supabase = {
-    table: tableName,
-    type: operation as Operation,
-  }
+    // deploy code checks this
+    ; (firebaseFunction as FirebaseFunctionWithSupabase)._supabase = {
+      table: tableName,
+      type: operation as Operation,
+    }
 
   return firebaseFunction
 }

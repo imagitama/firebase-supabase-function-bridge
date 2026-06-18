@@ -42,6 +42,11 @@ const actuallyGetCliArgs = () =>
         short: 'k',
         default: process.env.SUPABASE_CUSTOM_API_KEY,
       },
+      timeoutMs: {
+        type: 'string',
+        short: 't',
+        default: '2000',
+      },
       initApp: { type: 'boolean', default: false },
       indexPath: {
         type: 'string',

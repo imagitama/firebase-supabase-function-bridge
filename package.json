@@ -1,6 +1,6 @@
 {
   "name": "firebase-supabase-function-bridge",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "Bridge between Firebase Functions and Supabase HTTP triggers.",
   "main": "index.js",
   "author": "Jared Williams <accounts@jaredwilliams.com.au>",

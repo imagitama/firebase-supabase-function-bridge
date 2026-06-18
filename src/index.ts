@@ -120,11 +120,15 @@ export const validateRequest = <TRecord>(
   }
 }
 
-type OperationPayload<TOperation extends Operation, TRecord> =
-  TOperation extends Operation.Create ? InsertPayload<TRecord> :
-  TOperation extends Operation.Update ? UpdatePayload<TRecord> :
-  // Op extends Operation.Delete ? DeletePayload<TRecord> :
-  BasePayload<TRecord>
+type OperationPayload<
+  TOperation extends Operation,
+  TRecord
+> = TOperation extends Operation.Create
+  ? InsertPayload<TRecord>
+  : TOperation extends Operation.Update
+  ? UpdatePayload<TRecord>
+  : // Op extends Operation.Delete ? DeletePayload<TRecord> :
+    BasePayload<TRecord>
 
 /**
  * Creates a "Supabase" function which performs all of the wiring to bridge Supabase with Firebase.
@@ -135,7 +139,10 @@ type OperationPayload<TOperation extends Operation, TRecord> =
  * @param body The function body.
  * @returns A Firebase HTTP function.
  */
-export const createSupabaseFunction = <TRecord, TOperation extends Operation>(
+export const createSupabaseFunction = <
+  TRecord,
+  TOperation extends Operation = Operation
+>(
   tableName: string,
   operation: TOperation,
   body: (
@@ -151,7 +158,12 @@ export const createSupabaseFunction = <TRecord, TOperation extends Operation>(
         validateRequest<TRecord>(req, res, tableName, operation as Operation)
       ) {
         try {
-          await body(req as SupabaseWebhookRequest<OperationPayload<TOperation, TRecord>>, res)
+          await body(
+            req as SupabaseWebhookRequest<
+              OperationPayload<TOperation, TRecord>
+            >,
+            res
+          )
 
           if (!res.headersSent) {
             res.status(200).send({
@@ -168,11 +180,11 @@ export const createSupabaseFunction = <TRecord, TOperation extends Operation>(
     }
   )
 
-    // deploy code checks this
-    ; (firebaseFunction as FirebaseFunctionWithSupabase)._supabase = {
-      table: tableName,
-      type: operation as Operation,
-    }
+  // deploy code checks this
+  ;(firebaseFunction as FirebaseFunctionWithSupabase)._supabase = {
+    table: tableName,
+    type: operation as Operation,
+  }
 
   return firebaseFunction
 }

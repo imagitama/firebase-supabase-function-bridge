@@ -144,7 +144,7 @@ export const createSupabaseFunction = <
   TOperation extends Operation = Operation
 >(
   tableName: string,
-  operation: TOperation,
+  operation: TOperation | FunctionTypes,
   body: (
     request: SupabaseWebhookRequest<OperationPayload<TOperation, TRecord>>,
     response: express.Response

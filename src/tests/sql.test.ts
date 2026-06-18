@@ -46,7 +46,7 @@ describe('SQL tests', () => {
 
       await connectToPostgres()
 
-      await createSupabaseFunctions(mockFunctions)
+      await createSupabaseFunctions(mockFunctions, 2000)
     })
 
     it('drops the existing SQL trigger', () => {
@@ -63,7 +63,7 @@ AFTER INSERT ON public.${tableName}
 FOR EACH ROW
 EXECUTE PROCEDURE supabase_functions.http_request('${url}', '${method}', '${JSON.stringify(
           headers
-        )}', '{}', '1000');`,
+        )}', '{}', '2000');`,
         []
       )
     })

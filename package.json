@@ -1,6 +1,6 @@
 {
   "name": "firebase-supabase-function-bridge",
-  "version": "2.2.2",
+  "version": "2.3.0",
   "description": "Bridge between Firebase Functions and Supabase HTTP triggers.",
   "main": "index.js",
   "author": "Jared Williams <accounts@jaredwilliams.com.au>",
@@ -31,7 +31,8 @@
   "scripts": {
     "prettier": "prettier \"src/**/*.js\" -w",
     "build": "shx rm -rf ./dist && tsc && shx cp package.json ./dist && shx cp -R ./bin ./dist && shx cp README.md ./dist && shx cp LICENSE.md ./dist && shx cp CHANGELOG.md ./dist",
-    "test": "jest"
+    "test": "jest",
+    "package": "cd ./dist && npm pack && cd ../"
   },
   "engines": {
     "node": ">=18"

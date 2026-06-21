@@ -26,6 +26,7 @@ export interface SupabaseFunctionConfig {
   name: string
   table: string
   event: string
+  sqlCondition?: string
 }
 
 type SupabaseFunctions = { [functionName: string]: SupabaseFunctionConfig }
@@ -47,12 +48,13 @@ export function getFirebaseFunctionsAsSupabaseFunctions(): SupabaseFunctions {
       continue
     }
 
-    const { table, type } = functionBody._supabase
+    const { table, type, sqlCondition } = functionBody._supabase
 
     supabaseFunctions[functionName] = {
       name: functionName,
       table,
       event: type,
+      sqlCondition,
     }
   }
 
@@ -83,31 +85,33 @@ export async function createSupabaseFunctions(
 
   if (!args.customApiKey) throw new Error('Need a custom API key')
 
-  for (const [functionName, functionConfig] of Object.entries(
-    supabaseFunctions
-  )) {
+  for (const [
+    functionName,
+    { table: tableName, event: operationName, sqlCondition },
+  ] of Object.entries(supabaseFunctions)) {
     const method = 'POST'
     const url = `${args.baseUrl}/${functionName}`
-    const tableName = functionConfig.table
-    const operation = functionConfig.event as Operation
     const headers = {
       'content-type': 'application/json',
       'x-api-key': args.customApiKey,
     }
 
     console.debug(
-      `Function "${functionName}": ${tableName}.${operation} -> ${method} ${url}`
+      `Function "${functionName}": ${tableName}.${operationName} -> ${method} ${url}`
     )
 
-    console.info(`Deploying ${functionName} (${tableName}.${operation})...`)
+    console.info(`Deploying ${functionName} (${tableName}.${operationName})...`)
 
     await runSqlQuery(
-      `DROP TRIGGER IF EXISTS ${functionName} ON public.${tableName}`
+      `DROP TRIGGER IF EXISTS ${functionName} ON public.${tableName};`
     )
 
     await runSqlQuery(`CREATE TRIGGER ${functionName}
-AFTER ${getSqlEventForOperation(operation)} ON public.${tableName}
+AFTER ${getSqlEventForOperation(
+      operationName as Operation
+    )} ON public.${tableName}
 FOR EACH ROW
+${sqlCondition ? `WHEN (${sqlCondition})` : ``}
 EXECUTE PROCEDURE supabase_functions.http_request('${url}', '${method}', '${JSON.stringify(
       headers
     )}', '{}', '${timeoutMs}');`)

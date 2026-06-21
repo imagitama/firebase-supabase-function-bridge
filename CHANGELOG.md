@@ -1,3 +1,17 @@
+# 2.3.0
+
+- added SQL conditions to check before sending HTTP request:
+
+```js
+export default createSupabaseFunction(
+  'users', 
+  Operation.Update, 
+  (req, res) => {}, 
+  undefined, 
+  `NEW.banstatus <> OLD.banstatus AND NEW.banstatus = 'banned'`
+)
+```
+
 # 2.2.0
 
 - increased default timeout from 1000ms => 2000ms

@@ -20,6 +20,7 @@ export enum FunctionTypes {
 export interface SupabaseFunctionInfo {
   table: string
   type: Operation
+  sqlCondition?: string
 }
 
 export type FirebaseFunctionWithSupabase = FirebaseHttps.HttpsFunction & {
@@ -31,7 +32,7 @@ type TableRecord<T> = T
 enum PayloadType {
   Insert = 'INSERT',
   Update = 'UPDATE',
-  Delete = 'DELETE'
+  Delete = 'DELETE',
 }
 
 export interface BasePayload<T> {

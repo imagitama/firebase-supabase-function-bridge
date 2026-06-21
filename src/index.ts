@@ -137,6 +137,7 @@ type OperationPayload<
  * @param tableName The table to subscribe to.
  * @param functionType The operation to subscribe to (INSERT/UPDATE).
  * @param body The function body.
+ * @param options Firebase function options like memory limit, etc.
  * @returns A Firebase HTTP function.
  */
 export const createSupabaseFunction = <
@@ -149,7 +150,8 @@ export const createSupabaseFunction = <
     request: SupabaseWebhookRequest<OperationPayload<TOperation, TRecord>>,
     response: express.Response
   ) => void | Promise<void>,
-  options: FirebaseHttps.HttpsOptions = {}
+  options: FirebaseHttps.HttpsOptions = {},
+  sqlCondition?: string
 ): FirebaseHttps.HttpsFunction => {
   const firebaseFunction: FirebaseHttps.HttpsFunction = FirebaseHttps.onRequest(
     options,
@@ -184,6 +186,7 @@ export const createSupabaseFunction = <
   ;(firebaseFunction as FirebaseFunctionWithSupabase)._supabase = {
     table: tableName,
     type: operation as Operation,
+    sqlCondition,
   }
 
   return firebaseFunction

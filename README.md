@@ -67,10 +67,14 @@ export const myFunctionName = createSupabaseFunction<PhotoRecord>(
   (req, res) => {
     const myPhoto = req.body.record
 
+    // do something with your photo
+
     res.status(200).send({ message: 'Success!' })
   }
 )
 ```
+
+You can also specify a basic `WHERE` condition to avoid unnecessary HTTP requests:
 
 ```ts
 export default createSupabaseFunction<PhotoRecord>(
@@ -85,7 +89,9 @@ export default createSupabaseFunction<PhotoRecord>(
     )
 
     res.status(200).send({ message: 'Success!' })
-  }
+  },
+  undefined,
+  `NEW.username <> OLD.username`
 )
 ```
 
@@ -112,6 +118,10 @@ Show extra output such as SQL statements.
 #### `--initApp`
 
 Initialise Firebase Admin for you. This usually conflicts with your Firebase Functions code so not recommended.
+
+#### `--timeoutMs`
+
+Override the HTTP request timeout (default `2000`).
 
 ## Development
 
